@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI開発事例 - 監査調書の自動作成</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #ffffff;
+            --bg-sub: #f5f7fa;
+            --text: #1a1a2e;
+            --text-sub: #4a5568;
+            --text-muted: #8a94a6;
+            --border: #e2e8f0;
+            --border-light: #edf2f7;
+            --accent: #1e3a5f;
+            --accent-light: #2d5a8e;
+            --danger: #c53030;
+            --danger-bg: #fff5f5;
+            --danger-border: #fed7d7;
+            --green: #276749;
+            --green-bg: #f0fff4;
+            --green-border: #c6f6d5;
+            --warn: #975a16;
+            --warn-bg: #fffff0;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            opacity: 0;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 6vh 8vw;
+        }
+
+        .scene.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .scene-label {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(12px, 0.9vw, 16px);
+            font-weight: 600;
+            letter-spacing: 3px;
+            color: var(--accent);
+            text-transform: uppercase;
+            opacity: 0;
+            transform: translateY(20px);
+            margin-bottom: 2vh;
+        }
+
+        .scene-heading {
+            font-size: clamp(28px, 3.2vw, 56px);
+            font-weight: 800;
+            line-height: 1.4;
+            letter-spacing: -0.02em;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .scene-body {
+            font-size: clamp(16px, 1.4vw, 24px);
+            color: var(--text-sub);
+            line-height: 1.9;
+            text-align: center;
+            max-width: 70vw;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .scene-sub {
+            font-size: clamp(14px, 1.1vw, 20px);
+            color: var(--text-muted);
+            line-height: 1.8;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .overview-grid {
+            display: flex;
+            gap: clamp(16px, 2vw, 40px);
+            margin-top: 4vh;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .overview-item {
+            text-align: center;
+            padding: 3vh 3vw;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-sub);
+            min-width: clamp(160px, 14vw, 260px);
+        }
+
+        .overview-num {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(32px, 3.5vw, 64px);
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 0.5vh;
+        }
+
+        .overview-label {
+            font-size: clamp(13px, 1vw, 18px);
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        .challenge-content {
+            width: 100%;
+            max-width: 80vw;
+            display: flex;
+            flex-direction: column;
+            gap: 4vh;
+            align-items: center;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .challenge-num {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(14px, 1.1vw, 20px);
+            font-weight: 700;
+            color: var(--danger);
+            background: var(--danger-bg);
+            border: 1px solid var(--danger-border);
+            padding: 0.8vh 2vw;
+            border-radius: 6px;
+            letter-spacing: 2px;
+        }
+
+        .challenge-title {
+            font-size: clamp(26px, 2.8vw, 48px);
+            font-weight: 800;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .challenge-desc {
+            font-size: clamp(16px, 1.3vw, 22px);
+            color: var(--text-sub);
+            text-align: center;
+            line-height: 1.9;
+            max-width: 65vw;
+        }
+
+        .challenge-stat {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-top: 1vh;
+        }
+
+        .challenge-stat-val {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(36px, 4vw, 72px);
+            font-weight: 800;
+            color: var(--danger);
+        }
+
+        .challenge-stat-unit {
+            font-size: clamp(16px, 1.2vw, 22px);
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        .flow-container {
+            display: flex;
+            align-items: flex-start;
+            width: 100%;
+            margin-top: 4vh;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .flow-step {
+            flex: 1;
+            text-align: center;
+            padding: 0 1.5vw;
+        }
+
+        .flow-num {
+            width: clamp(52px, 5vw, 80px);
+            height: clamp(52px, 5vw, 80px);
+            margin: 0 auto 2vh;
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(20px, 2vw, 32px);
+            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .flow-step h3 {
+            font-size: clamp(16px, 1.3vw, 22px);
+            font-weight: 700;
+            margin-bottom: 1vh;
+        }
+
+        .flow-step p {
+            font-size: clamp(13px, 1vw, 18px);
+            color: var(--text-sub);
+            line-height: 1.7;
+        }
+
+        .flow-arrow {
+            font-size: clamp(20px, 2vw, 32px);
+            color: var(--border);
+            flex-shrink: 0;
+            width: clamp(30px, 3vw, 50px);
+            text-align: center;
+            padding-top: clamp(20px, 2vw, 30px);
+        }
+
+        .mockup-container {
+            width: 100%;
+            max-width: 70vw;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .excel-frame {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+
+        .excel-toolbar {
+            background: var(--bg-sub);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: clamp(12px, 0.9vw, 16px);
+            color: var(--text-muted);
+            font-family: 'Inter', monospace;
+        }
+
+        .excel-toolbar-title {
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+
+        .excel-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: clamp(12px, 0.9vw, 16px);
+        }
+
+        .excel-table th {
+            background: var(--accent);
+            color: #fff;
+            font-weight: 600;
+            padding: 10px 14px;
+            text-align: left;
+            border: 1px solid var(--accent);
+            white-space: nowrap;
+        }
+
+        .excel-table td {
+            padding: 8px 14px;
+            border: 1px solid var(--border-light);
+            color: var(--text-sub);
+        }
+
+        .cell-miss {
+            background: #fff5f5;
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .cell-warn {
+            background: var(--warn-bg);
+            color: var(--warn);
+            font-weight: 600;
+        }
+
+        .cell-ok {
+            background: var(--green-bg);
+            color: var(--green);
+            font-weight: 600;
+        }
+
+        .excel-note {
+            padding: 10px 18px;
+            font-size: clamp(12px, 0.9vw, 16px);
+            color: var(--danger);
+            background: var(--danger-bg);
+            border-top: 1px solid var(--danger-border);
+        }
+
+        .app-frame {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+
+        .app-toolbar {
+            background: var(--accent);
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #fff;
+            font-size: clamp(13px, 1vw, 18px);
+            font-weight: 600;
+        }
+
+        .app-body {
+            padding: 16px;
+            background: #f8fafc;
+        }
+
+        .app-card {
+            background: #fff;
+            border-radius: 6px;
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .app-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .app-card-hd {
+            padding: 8px 14px;
+            border-bottom: 1px solid var(--border-light);
+            font-size: clamp(12px, 0.9vw, 16px);
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .app-card-bd {
+            padding: 12px 14px;
+        }
+
+        .check-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: clamp(13px, 1vw, 18px);
+            color: var(--text-sub);
+            padding: 4px 0;
+        }
+
+        .check-icon {
+            color: var(--green);
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+
+        .warn-icon {
+            color: #d97706;
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+
+        .doc-preview {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: clamp(12px, 0.9vw, 16px);
+            background: #fff;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: 16px 20px;
+            line-height: 2;
+            color: var(--text-sub);
+        }
+
+        .doc-preview .doc-title {
+            font-size: clamp(16px, 1.2vw, 22px);
+            font-weight: 700;
+            color: var(--text);
+            text-align: center;
+            margin-bottom: 12px;
+            border-bottom: 2px solid var(--text);
+            padding-bottom: 8px;
+        }
+
+        .doc-preview .doc-section {
+            font-weight: 700;
+            color: var(--accent);
+            margin-top: 8px;
+        }
+
+        .doc-preview .doc-hl {
+            background: #fefce8;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            color: var(--warn);
+        }
+
+        .demo-visual {
+            width: 100%;
+            max-width: 70vw;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 3vw;
+            align-items: center;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .demo-box {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 4vh 3vw;
+            text-align: center;
+            background: var(--bg-sub);
+        }
+
+        .demo-box-title {
+            font-size: clamp(16px, 1.3vw, 22px);
+            font-weight: 700;
+            margin-bottom: 2vh;
+            color: var(--accent);
+        }
+
+        .demo-box-desc {
+            font-size: clamp(14px, 1.1vw, 18px);
+            color: var(--text-sub);
+            line-height: 1.8;
+        }
+
+        .demo-arrow {
+            font-size: clamp(24px, 2.5vw, 40px);
+            color: var(--border);
+        }
+
+        .timeline {
+            width: 100%;
+            max-width: 75vw;
+            display: flex;
+            gap: 0;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .timeline-item {
+            flex: 1;
+            padding: 4vh 2.5vw;
+            border: 1px solid var(--border);
+            text-align: center;
+            position: relative;
+        }
+
+        .timeline-item:first-child {
+            border-radius: 8px 0 0 8px;
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .timeline-item:first-child .tl-label {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .timeline-item:first-child .tl-desc {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .timeline-item:nth-child(2) {
+            background: var(--bg-sub);
+        }
+
+        .timeline-item:last-child {
+            border-radius: 0 8px 8px 0;
+            background: var(--bg-sub);
+        }
+
+        .tl-label {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(12px, 0.9vw, 16px);
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-bottom: 1.5vh;
+        }
+
+        .tl-title {
+            font-size: clamp(20px, 1.8vw, 32px);
+            font-weight: 800;
+            margin-bottom: 2vh;
+            line-height: 1.4;
+        }
+
+        .tl-list {
+            list-style: none;
+            text-align: left;
+            margin-top: 2vh;
+            font-size: clamp(13px, 0.9vw, 16px);
+            color: var(--text-sub);
+            line-height: 2;
+        }
+
+        .timeline-item:first-child .tl-list {
+            color: rgba(255,255,255,0.85);
+        }
+
+        .result-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3vh;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .result-big-num {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(72px, 10vw, 160px);
+            font-weight: 900;
+            color: var(--accent);
+            line-height: 1;
+        }
+
+        .result-title {
+            font-size: clamp(24px, 2.4vw, 42px);
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .result-desc {
+            font-size: clamp(16px, 1.3vw, 22px);
+            color: var(--text-sub);
+            text-align: center;
+            line-height: 1.9;
+            max-width: 60vw;
+        }
+
+        .cta-button {
+            padding: 2.5vh 5vw;
+            background: var(--accent);
+            border-radius: 6px;
+            font-size: clamp(16px, 1.3vw, 22px);
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            color: white;
+            font-family: 'Noto Sans JP', sans-serif;
+            letter-spacing: 1px;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .cta-contact {
+            font-size: clamp(14px, 1vw, 18px);
+            color: var(--text-muted);
+            font-family: 'Inter', sans-serif;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        @keyframes sceneIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes sceneOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .progress-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: var(--accent);
+            z-index: 100;
+            transition: width 0.3s ease;
+        }
+
+        .scene-indicators {
+            position: fixed;
+            right: 2vw;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 0.8vh;
+            z-index: 100;
+        }
+
+        .scene-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            padding: 0;
+        }
+
+        .scene-dot.active {
+            background: var(--accent);
+            transform: scale(1.4);
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 2vh;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.8vw;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        body:hover .controls {
+            opacity: 1;
+        }
+
+        .ctrl-btn {
+            width: clamp(36px, 2.6vw, 48px);
+            height: clamp(36px, 2.6vw, 48px);
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-sub);
+            font-size: clamp(13px, 1vw, 18px);
+            transition: all 0.2s ease;
+        }
+
+        .ctrl-btn:hover {
+            background: var(--bg-sub);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .page-num {
+            position: fixed;
+            bottom: 2vh;
+            right: 4vw;
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(11px, 0.8vw, 14px);
+            color: var(--text-muted);
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <!-- Scene 1: Title -->
+    <section id="scene1" class="scene">
+        <div class="scene-label" data-anim="fadeInUp" data-delay="0">AI Development Case Study</div>
+        <h1 class="scene-heading" data-anim="fadeInUp" data-delay="100">監査調書の作成を<br>AIで自動化</h1>
+        <p class="scene-body" data-anim="fadeInUp" data-delay="200">監査法人では、監査に必要な資料やヒアリング内容をもとに論点を整理し、監査調書を作成する作業に膨大な時間がかかっていました。AIが資料を自動で読み取り、論点を抽出・整理し、監査調書のドラフトを自動生成。ベテラン依存だった作業を標準化し、品質とスピードを同時に向上させました。</p>
+        <div class="overview-grid" data-anim="fadeInUp" data-delay="300">
+            <div class="overview-item">
+                <div class="overview-num">95%</div>
+                <div class="overview-label">作業時間を削減</div>
+            </div>
+            <div class="overview-item">
+                <div class="overview-num">20分</div>
+                <div class="overview-label">で調書ドラフト完成</div>
+            </div>
+            <div class="overview-item">
+                <div class="overview-num">標準化</div>
+                <div class="overview-label">ベテラン依存を解消</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 2: Challenge 01 -->
+    <section id="scene2" class="scene">
+        <div class="challenge-content">
+            <div class="challenge-num" data-anim="fadeInUp" data-delay="0">CHALLENGE 01</div>
+            <h2 class="challenge-title" data-anim="fadeInUp" data-delay="100">監査調書の作成に<br>膨大な時間がかかる</h2>
+            <p class="challenge-desc" data-anim="fadeInUp" data-delay="200">監査に必要な資料を精査し、ヒアリング内容を整理して論点をまとめ、調書のドラフトを作成する。案件が複雑になるほど必要な資料も増え、論点整理だけで数時間を費やすこともある。</p>
+            <div class="challenge-stat" data-anim="fadeInUp" data-delay="300">
+                <div class="challenge-stat-val">6時間</div>
+                <div class="challenge-stat-unit">/ 1案件あたりの調書作成</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 3: Challenge 02 -->
+    <section id="scene3" class="scene">
+        <div class="challenge-content">
+            <div class="challenge-num" data-anim="fadeInUp" data-delay="0">CHALLENGE 02</div>
+            <h2 class="challenge-title" data-anim="fadeInUp" data-delay="100">ベテラン依存で<br>新人が対応できない</h2>
+            <p class="challenge-desc" data-anim="fadeInUp" data-delay="200">監査調書の品質は、論点の抽出精度と記載の網羅性に左右される。これらはベテランの経験と知見に大きく依存しており、新人が同等の品質で作成するのは困難。教育にも長い期間を要する。</p>
+            <div class="challenge-stat" data-anim="fadeInUp" data-delay="300">
+                <div class="challenge-stat-val">属人化</div>
+                <div class="challenge-stat-unit">経験年数で品質に大きな差</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 4: Challenge 03 -->
+    <section id="scene4" class="scene">
+        <div class="challenge-content">
+            <div class="challenge-num" data-anim="fadeInUp" data-delay="0">CHALLENGE 03</div>
+            <h2 class="challenge-title" data-anim="fadeInUp" data-delay="100">論点の整理漏れや<br>記載ミスによる差し戻し</h2>
+            <p class="challenge-desc" data-anim="fadeInUp" data-delay="200">膨大な資料の中から必要な論点を漏れなく抽出し、正確に記載するのは容易ではない。論点の抜け漏れや記載の不備があると、レビュー時に差し戻しが発生し、修正・再レビューで更に時間を取られる。</p>
+            <div class="challenge-stat" data-anim="fadeInUp" data-delay="300">
+                <div class="challenge-stat-val">差し戻し</div>
+                <div class="challenge-stat-unit">論点漏れ・記載不備が頻発</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 5: Solution Flow -->
+    <section id="scene5" class="scene">
+        <div class="scene-label" data-anim="fadeInUp" data-delay="0">Solution</div>
+        <h2 class="scene-heading" data-anim="fadeInUp" data-delay="100">AIによる自動処理フロー</h2>
+        <div class="flow-container" data-anim="fadeInUp" data-delay="200">
+            <div class="flow-step">
+                <div class="flow-num">1</div>
+                <h3>資料アップロード</h3>
+                <p>監査資料・ヒアリング<br>メモをアップロード</p>
+            </div>
+            <div class="flow-arrow">&#8594;</div>
+            <div class="flow-step">
+                <div class="flow-num">2</div>
+                <h3>AI論点抽出</h3>
+                <p>AIが資料を読み取り<br>論点を自動抽出・整理</p>
+            </div>
+            <div class="flow-arrow">&#8594;</div>
+            <div class="flow-step">
+                <div class="flow-num">3</div>
+                <h3>調書ドラフト生成</h3>
+                <p>論点に基づいた<br>監査調書ドラフトを<br>自動作成</p>
+            </div>
+            <div class="flow-arrow">&#8594;</div>
+            <div class="flow-step">
+                <div class="flow-num">4</div>
+                <h3>レビュー・完成</h3>
+                <p>担当者がレビューし<br>修正・加筆して完成</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 6: Before Mockup -->
+    <section id="scene6" class="scene">
+        <div class="scene-label" data-anim="fadeInUp" data-delay="0">Before</div>
+        <h2 class="scene-heading" data-anim="fadeInUp" data-delay="100">従来の作業</h2>
+        <p class="scene-sub" data-anim="fadeInUp" data-delay="150">膨大な監査資料とヒアリングメモ</p>
+        <p class="scene-sub" data-anim="fadeInUp" data-delay="200">これらの資料を1つずつ精査し、論点を手作業で整理して調書を作成していた</p>
+        <div class="mockup-container" data-anim="fadeInUp" data-delay="300">
+            <div class="excel-frame">
+                <div class="excel-toolbar">
+                    <span class="excel-toolbar-title">&#128196; C社_監査論点整理_FY2025.xlsx</span>
+                </div>
+                <table class="excel-table">
+                    <thead>
+                        <tr>
+                            <th>論点No</th>
+                            <th>監査項目</th>
+                            <th>関連資料</th>
+                            <th>リスク評価</th>
+                            <th>検出事項</th>
+                            <th>ステータス</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>売上高の期間帰属</td>
+                            <td>売上台帳・契約書</td>
+                            <td class="cell-warn">高</td>
+                            <td>期末日前後の大口取引3件</td>
+                            <td>確認中</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>貸倒引当金の妥当性</td>
+                            <td>債権年齢表</td>
+                            <td>中</td>
+                            <td>長期滞留債権の増加</td>
+                            <td>確認中</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>固定資産の減損</td>
+                            <td class="cell-miss">未入手</td>
+                            <td class="cell-miss">未評価</td>
+                            <td class="cell-miss">未着手</td>
+                            <td class="cell-miss">未着手</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>関連当事者取引</td>
+                            <td>取締役会議事録</td>
+                            <td class="cell-warn">高</td>
+                            <td class="cell-warn">新規取引先の確認要</td>
+                            <td>確認中</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>税効果会計</td>
+                            <td>税務申告書</td>
+                            <td>中</td>
+                            <td>繰延税金資産の回収可能性</td>
+                            <td>確認中</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="excel-note">未着手1件：固定資産の減損（資料未入手）/ 要注意2件：売上高の期間帰属（リスク高）、関連当事者取引（新規取引先）</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 7: After Mockup -->
+    <section id="scene7" class="scene">
+        <div class="scene-label" data-anim="fadeInUp" data-delay="0">After</div>
+        <h2 class="scene-heading" data-anim="fadeInUp" data-delay="100">AI処理後</h2>
+        <p class="scene-sub" data-anim="fadeInUp" data-delay="150">監査調書ドラフトが自動生成</p>
+        <p class="scene-sub" data-anim="fadeInUp" data-delay="200">資料をアップロードするだけで、論点が整理された調書ドラフトが完成</p>
+        <div class="mockup-container" data-anim="fadeInUp" data-delay="300">
+            <div class="app-frame">
+                <div class="app-toolbar">
+                    &#10003; 監査調書自動作成AI / C社 FY2025 / 処理完了
+                </div>
+                <div class="app-body">
+                    <div class="app-card">
+                        <div class="app-card-hd">AI解析結果</div>
+                        <div class="app-card-bd">
+                            <div class="check-row">
+                                <span class="check-icon">&#10003;</span>
+                                <span>12件の監査資料から論点を自動抽出</span>
+                            </div>
+                            <div class="check-row">
+                                <span class="check-icon">&#10003;</span>
+                                <span>5つの主要監査項目を特定・整理</span>
+                            </div>
+                            <div class="check-row">
+                                <span class="check-icon">&#10003;</span>
+                                <span>リスク評価に基づく優先順位を設定</span>
+                            </div>
+                            <div class="check-row">
+                                <span class="warn-icon">&#9888;</span>
+                                <span>1件の資料が未入手 &#8594; 追加依頼リストを生成済み</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="app-card">
+                        <div class="app-card-hd">自動生成 - 監査調書ドラフト（プレビュー）</div>
+                        <div class="app-card-bd">
+                            <div class="doc-preview">
+                                <div class="doc-title">監査調書 - C社 FY2025</div>
+                                <div class="doc-section">【論点1】売上高の期間帰属（リスク：<span class="doc-hl">高</span>）</div>
+                                <div>期末日前後の大口取引3件（合計 48,000千円）について、契約書の履行義務充足時点と売上計上時期の整合性を検証。うち1件は出荷基準と検収基準の適用判断が必要。</div>
+                                <div class="doc-section">【論点2】関連当事者取引（リスク：<span class="doc-hl">高</span>）</div>
+                                <div>新規取引先X社について、取締役会議事録および登記情報から関連当事者該当性を確認。取引条件の第三者比較を実施済み。</div>
+                                <div class="doc-section">【論点3】貸倒引当金の妥当性（リスク：中）</div>
+                                <div>債権年齢表の分析結果、180日超の長期滞留債権が前期比+22%増加。個別評価対象の妥当性を検証。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 8: Development Process -->
+    <section id="scene8" class="scene">
+        <div class="scene-label" data-anim="fadeInUp" data-delay="0">Development Process</div>
+        <h2 class="scene-heading" data-anim="fadeInUp" data-delay="100">打ち合わせ中にデモを作成し<br>認識をすり合わせ</h2>
+        <p class="scene-body" data-anim="fadeInUp" data-delay="200">仕様書だけでは伝わりにくい部分も、打ち合わせの場で簡易デモを作成してお見せすることで、「思っていたものと違う」を未然に防ぎます。</p>
+        <div class="demo-visual" data-anim="fadeInUp" data-delay="300">
+            <div class="demo-box">
+                <div class="demo-box-title">打ち合わせ</div>
+                <div class="demo-box-desc">監査業務のフローや<br>現場の課題をヒアリング</div>
+            </div>
+            <div class="demo-arrow">&#8594;</div>
+            <div class="demo-box">
+                <div class="demo-box-title">その場でデモ作成</div>
+                <div class="demo-box-desc">実際の監査資料を使って<br>簡易デモを構築し<br>画面を見ながらすり合わせ</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 9: Timeline -->
+    <section id="scene9" class="scene">
+        <div class="scene-label" data-anim="fadeInUp" data-delay="0">Timeline</div>
+        <h2 class="scene-heading" data-anim="fadeInUp" data-delay="100">開発スケジュール</h2>
+        <div class="timeline" data-anim="fadeInUp" data-delay="200">
+            <div class="timeline-item">
+                <div class="tl-label">MONTH 1</div>
+                <h3 class="tl-title">基本機能の開発</h3>
+                <ul class="tl-list">
+                    <li>&#9632; 監査資料のAI読み取り機能</li>
+                    <li>&#9632; 論点自動抽出エンジン</li>
+                    <li>&#9632; 調書ドラフト生成機能</li>
+                    <li>&#9632; 基本的な画面の構築</li>
+                </ul>
+            </div>
+            <div class="timeline-item">
+                <div class="tl-label">MONTH 2</div>
+                <h3 class="tl-title">現場に合わせた<br>カスタマイズ</h3>
+                <ul class="tl-list">
+                    <li>&#9632; 法人固有の調書フォーマットに対応</li>
+                    <li>&#9632; リスク評価ロジックの調整</li>
+                    <li>&#9632; 業務フローに合わせたUI改善</li>
+                    <li>&#9632; フィードバック反映</li>
+                </ul>
+            </div>
+            <div class="timeline-item">
+                <div class="tl-label">MONTH 3</div>
+                <h3 class="tl-title">精度向上と<br>運用安定化</h3>
+                <ul class="tl-list">
+                    <li>&#9632; 論点抽出精度のチューニング</li>
+                    <li>&#9632; エッジケースへの対応</li>
+                    <li>&#9632; 運用マニュアル整備</li>
+                    <li>&#9632; 本格運用開始</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 10: Result 01 -->
+    <section id="scene10" class="scene">
+        <div class="result-content">
+            <div class="scene-label" data-anim="fadeInUp" data-delay="0">RESULT 01</div>
+            <div class="result-big-num" data-anim="fadeInScale" data-delay="100"><span id="counter1">0</span></div>
+            <h2 class="result-title" data-anim="fadeInUp" data-delay="200">作業時間を95%削減</h2>
+            <p class="result-desc" data-anim="fadeInUp" data-delay="300">6時間かかっていた監査調書の作成が、わずか20分で完了。AIが資料を読み取り、論点抽出・整理・調書ドラフト生成までを自動化。担当者はレビューと加筆に集中できる。</p>
+        </div>
+    </section>
+
+    <!-- Scene 11: Result 02 -->
+    <section id="scene11" class="scene">
+        <div class="result-content">
+            <div class="scene-label" data-anim="fadeInUp" data-delay="0">RESULT 02</div>
+            <div class="result-big-num" data-anim="fadeInScale" data-delay="100"><span id="counter2">0</span></div>
+            <h2 class="result-title" data-anim="fadeInUp" data-delay="200">属人化を解消し標準化を実現</h2>
+            <p class="result-desc" data-anim="fadeInUp" data-delay="300">ベテランの経験に頼っていた論点の抽出や調書の構成をAIが担うことで、経験年数に関わらず同品質の監査調書を作成可能に。新人の教育期間も大幅に短縮。</p>
+        </div>
+    </section>
+
+    <!-- Scene 12: Result 03 -->
+    <section id="scene12" class="scene">
+        <div class="result-content">
+            <div class="scene-label" data-anim="fadeInUp" data-delay="0">RESULT 03</div>
+            <div class="result-big-num" data-anim="fadeInScale" data-delay="100"><span id="counter3">0</span></div>
+            <h2 class="result-title" data-anim="fadeInUp" data-delay="200">差し戻しを大幅削減</h2>
+            <p class="result-desc" data-anim="fadeInUp" data-delay="300">AIが論点を網羅的に抽出し、記載漏れを自動検出するため、レビュー時の差し戻しが大幅に減少。修正・再レビューの無駄な工数がなくなり、監査チーム全体の生産性が向上。</p>
+        </div>
+    </section>
+
+    <!-- Scene 13: CTA -->
+    <section id="scene13" class="scene">
+        <h2 class="scene-heading" data-anim="fadeInUp" data-delay="0">監査調書作成の負担を<br>減らしませんか？</h2>
+        <p class="scene-body" data-anim="fadeInUp" data-delay="100">資料をアップロードするだけでAIが論点を整理。<br>レビューと判断だけに集中できる環境を。</p>
+        <button class="cta-button" data-anim="fadeInUp" data-delay="200">お問い合わせはこちら</button>
+        <p class="cta-contact" data-anim="fadeInUp" data-delay="300">contact@because-and.co.jp</p>
+    </section>
+
+    <!-- Navigation -->
+    <div id="progressBar" class="progress-bar"></div>
+    <div id="sceneIndicators" class="scene-indicators"></div>
+    <div class="controls">
+        <button class="ctrl-btn" onclick="prevScene()">&#9664;</button>
+        <button class="ctrl-btn" id="playPauseBtn" onclick="toggleAutoPlay()">&#9646;&#9646;</button>
+        <button class="ctrl-btn" onclick="nextScene()">&#9654;</button>
+    </div>
+    <div id="pageNum" class="page-num"></div>
+
+    <script>
+        const totalScenes = 13;
+        let currentScene = 0;
+        let autoPlayTimer = null;
+        let isAutoPlaying = true;
+        const sceneDurations = [6000, 6000, 6000, 6000, 7000, 8000, 8000, 7000, 8000, 6000, 6000, 6000, 6000];
+
+        const indicatorContainer = document.getElementById('sceneIndicators');
+        for (let i = 0; i < totalScenes; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'scene-dot' + (i === 0 ? ' active' : '');
+            dot.onclick = () => goToScene(i);
+            indicatorContainer.appendChild(dot);
+        }
+
+        function updatePageNum() {
+            document.getElementById('pageNum').textContent = (currentScene + 1) + ' / ' + totalScenes;
+        }
+
+        function animateElements(sceneEl) {
+            const elements = sceneEl.querySelectorAll('[data-anim]');
+            elements.forEach(el => {
+                const delay = parseInt(el.dataset.delay) || 0;
+                el.style.opacity = '0';
+                setTimeout(() => {
+                    el.style.transition = 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)';
+                    el.style.opacity = '1';
+                    el.style.transform = 'translate(0, 0) scale(1)';
+                }, delay);
+            });
+        }
+
+        function resetElements(sceneEl) {
+            const elements = sceneEl.querySelectorAll('[data-anim]');
+            elements.forEach(el => {
+                el.style.transition = 'none';
+                el.style.opacity = '0';
+                const anim = el.dataset.anim;
+                if (anim === 'fadeInUp') el.style.transform = 'translateY(20px)';
+                else if (anim === 'fadeInLeft') el.style.transform = 'translateX(-30px)';
+                else if (anim === 'fadeInScale') el.style.transform = 'scale(0.95)';
+                else el.style.transform = 'translateY(20px)';
+            });
+        }
+
+        function startCounterAnimation(sceneIdx) {
+            if (sceneIdx === 9) animateCounter('counter1', 0, 20, 2000, '分');
+            if (sceneIdx === 10) animateCounter('counter2', 100, 0, 2000, '%');
+            if (sceneIdx === 11) animateCounter('counter3', 10, 0, 1800, '件');
+        }
+
+        function animateCounter(id, start, end, duration, suffix) {
+            const el = document.getElementById(id);
+            const startTime = performance.now();
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(start + (end - start) * eased) + suffix;
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            setTimeout(() => requestAnimationFrame(update), 500);
+        }
+
+        function goToScene(index) {
+            if (index < 0 || index >= totalScenes) return;
+            const currentEl = document.getElementById('scene' + (currentScene + 1));
+            if (currentEl) {
+                currentEl.style.animation = 'sceneOut 0.4s ease forwards';
+                setTimeout(() => {
+                    currentEl.classList.remove('active');
+                    currentEl.style.animation = '';
+                    resetElements(currentEl);
+                }, 400);
+            }
+            currentScene = index;
+            setTimeout(() => {
+                const newEl = document.getElementById('scene' + (currentScene + 1));
+                newEl.classList.add('active');
+                newEl.style.animation = 'sceneIn 0.4s ease forwards';
+                animateElements(newEl);
+                startCounterAnimation(currentScene);
+                updatePageNum();
+                document.querySelectorAll('.scene-dot').forEach((d, i) => {
+                    d.classList.toggle('active', i === currentScene);
+                });
+                document.getElementById('progressBar').style.width = ((currentScene + 1) / totalScenes * 100) + '%';
+            }, 400);
+            if (isAutoPlaying) {
+                clearTimeout(autoPlayTimer);
+                autoPlayTimer = setTimeout(() => nextScene(), sceneDurations[currentScene]);
+            }
+        }
+
+        function nextScene() {
+            goToScene(currentScene < totalScenes - 1 ? currentScene + 1 : 0);
+        }
+
+        function prevScene() {
+            if (currentScene > 0) goToScene(currentScene - 1);
+        }
+
+        function toggleAutoPlay() {
+            isAutoPlaying = !isAutoPlaying;
+            document.getElementById('playPauseBtn').innerHTML = isAutoPlaying ? '&#9646;&#9646;' : '&#9654;';
+            if (isAutoPlaying) autoPlayTimer = setTimeout(() => nextScene(), sceneDurations[currentScene]);
+            else clearTimeout(autoPlayTimer);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextScene();
+            }
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevScene();
+            }
+            if (e.key === 'p') toggleAutoPlay();
+        });
+
+        let wheelCooldown = false;
+        document.addEventListener('wheel', (e) => {
+            if (wheelCooldown) return;
+            wheelCooldown = true;
+            setTimeout(() => {
+                wheelCooldown = false;
+            }, 1200);
+            if (e.deltaY > 0) nextScene();
+            else prevScene();
+        }, { passive: true });
+
+        window.addEventListener('load', () => {
+            const scene1 = document.getElementById('scene1');
+            scene1.classList.add('active');
+            animateElements(scene1);
+            updatePageNum();
+            document.getElementById('progressBar').style.width = (1 / totalScenes * 100) + '%';
+            autoPlayTimer = setTimeout(() => nextScene(), sceneDurations[0]);
+        });
+    </script>
+</body>
+</html>
