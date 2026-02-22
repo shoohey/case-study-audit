@@ -956,8 +956,8 @@
     <section id="scene10" class="scene">
         <div class="result-content">
             <div class="scene-label" data-anim="fadeInUp" data-delay="0">RESULT 01</div>
-            <div class="result-big-num" data-anim="fadeInScale" data-delay="100"><span id="counter1">0</span></div>
-            <h2 class="result-title" data-anim="fadeInUp" data-delay="200">作業時間を95%削減</h2>
+            <div class="result-big-num" data-anim="fadeInScale" data-delay="100"><span id="counter1">0</span>%</div>
+            <h2 class="result-title" data-anim="fadeInUp" data-delay="200">作業時間を削減</h2>
             <p class="result-desc" data-anim="fadeInUp" data-delay="300">6時間かかっていた監査調書の作成が、わずか20分で完了。AIが資料を読み取り、論点抽出・整理・調書ドラフト生成までを自動化。担当者はレビューと加筆に集中できる。</p>
         </div>
     </section>
@@ -966,9 +966,9 @@
     <section id="scene11" class="scene">
         <div class="result-content">
             <div class="scene-label" data-anim="fadeInUp" data-delay="0">RESULT 02</div>
-            <div class="result-big-num" data-anim="fadeInScale" data-delay="100"><span id="counter2">0</span></div>
-            <h2 class="result-title" data-anim="fadeInUp" data-delay="200">属人化を解消し標準化を実現</h2>
-            <p class="result-desc" data-anim="fadeInUp" data-delay="300">ベテランの経験に頼っていた論点の抽出や調書の構成をAIが担うことで、経験年数に関わらず同品質の監査調書を作成可能に。新人の教育期間も大幅に短縮。</p>
+            <div class="result-big-num" data-anim="fadeInScale" data-delay="100"><span id="counter2">5</span>件</div>
+            <h2 class="result-title" data-anim="fadeInUp" data-delay="200">論点漏れ・差し戻しをゼロに</h2>
+            <p class="result-desc" data-anim="fadeInUp" data-delay="300">AIが論点を網羅的に抽出し、記載漏れを自動検出するため、レビュー時の差し戻しがゼロに。修正・再レビューの無駄な工数がなくなり、監査チーム全体の生産性が向上。</p>
         </div>
     </section>
 
@@ -976,9 +976,9 @@
     <section id="scene12" class="scene">
         <div class="result-content">
             <div class="scene-label" data-anim="fadeInUp" data-delay="0">RESULT 03</div>
-            <div class="result-big-num" data-anim="fadeInScale" data-delay="100"><span id="counter3">0</span></div>
-            <h2 class="result-title" data-anim="fadeInUp" data-delay="200">差し戻しを大幅削減</h2>
-            <p class="result-desc" data-anim="fadeInUp" data-delay="300">AIが論点を網羅的に抽出し、記載漏れを自動検出するため、レビュー時の差し戻しが大幅に減少。修正・再レビューの無駄な工数がなくなり、監査チーム全体の生産性が向上。</p>
+            <div class="result-big-num" data-anim="fadeInScale" data-delay="100"><span id="counter3">360</span>分</div>
+            <h2 class="result-title" data-anim="fadeInUp" data-delay="200">20分で調書ドラフトが完成</h2>
+            <p class="result-desc" data-anim="fadeInUp" data-delay="300">ベテランの経験に頼っていた論点の抽出や調書の構成をAIが担うことで、経験年数に関わらず同品質の監査調書を作成可能に。属人化を解消し、新人の教育期間も大幅に短縮。</p>
         </div>
     </section>
 
@@ -1046,9 +1046,9 @@
         }
 
         function startCounterAnimation(sceneIdx) {
-            if (sceneIdx === 9) animateCounter('counter1', 0, 20, 2000, '分');
-            if (sceneIdx === 10) animateCounter('counter2', 100, 0, 2000, '%');
-            if (sceneIdx === 11) animateCounter('counter3', 10, 0, 1800, '件');
+            if (sceneIdx === 9) animateCounter('counter1', 0, 95, 2000, '%');
+            if (sceneIdx === 10) animateCounter('counter2', 5, 0, 2000, '件');
+            if (sceneIdx === 11) animateCounter('counter3', 360, 20, 1800, '分');
         }
 
         function animateCounter(id, start, end, duration, suffix) {
